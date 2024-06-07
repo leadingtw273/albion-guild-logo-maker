@@ -1,7 +1,10 @@
-import { Card, Flex, Image, Form, Select, Radio, Slider } from 'antd';
-import { useDebounceValue } from 'usehooks-ts'
+import { Tooltip, Space, Card, Flex, Image, Form, Select, Radio, Slider, Input, Button, message } from 'antd';
+import { useDebounceCallback, useCopyToClipboard } from 'usehooks-ts'
+import { CopyOutlined, RedoOutlined } from '@ant-design/icons';
 
 import './App.css'
+import { Divider } from 'antd';
+import { useEffect, useState } from 'react';
 
 const colorList = [
   {value: 1, rgb: [0, 0, 0]},
@@ -122,81 +125,129 @@ const schemaOptions = [
 ]
 
 const iconBaseUrl = 'https://render.albiononline.com/v1/guild/logo.png'
+const defaultValues = {
+  type: 'PASSIVE_GUILD_UNRANKED',
+  symbol: 'GUILDSYMBOL_001',
+  symbolColor: 5,
+  symbolScale: 0.8,
+  symbolOffsetY: 0,
+  schema: 'SCHEMA_05',
+  primarySchemaColor:1,
+  secondarySchemaColor: 2,
+}
 
 function App() {
-  const [iconUrl, setIconUrl] = useDebounceValue(`${iconBaseUrl}?${
-    new URLSearchParams({
-      type: 'PASSIVE_GUILD_UNRANKED',
-      symbol: 'Scoia\'Tael',
-      symbolColor: 1,
-      symbolScale: 1,
-      symbolOffsetY: 0,
-      schema: 'SCHEMA_01',
-      primarySchemaColor: 1,
-      secondarySchemaColor: 1,
-    }).toString()
-  
-  }`, 500)
-  
-  return (
-    <Card>
-      <Flex>
-        <Form
-          labelCol={{ span: 6 }}
-          wrapperCol={{ span: 18 }}
-          style={{width: 580}}
-          onValuesChange={(_changedValues, allValues) => {
-            const searchParams = new URLSearchParams({
-              type: 'PASSIVE_GUILD_UNRANKED',
-              ...allValues
-            });
-            setIconUrl(`${iconBaseUrl}?${searchParams.toString()}`)
-          }}
-        >
-          <Form.Item label="圖標" name="symbol" initialValue={'Scoia\'Tael'}>
-            <Select options={symbolOptions} />
-          </Form.Item>
-          <Form.Item label="圖標顏色" name="symbolColor" initialValue={1}>
-            <Radio.Group>
-              {colorList.map(color => (
-                <Radio key={color.value} value={color.value} style={{alignItems: 'center'}}>
-                  <div className='color-block' style={{background: `rgb(${color.rgb.join(',')})`}}></div>
-                </Radio>
-              ))}
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item label="圖標大小" name="symbolScale" initialValue={1}>
-            <Slider step={0.1} max={1.5} min={-0.5}/>
-          </Form.Item>
-          <Form.Item label="圖標位移" name="symbolOffsetY" initialValue={0}>
-            <Slider step={0.1} max={1.5} min={-0.5}/>
-          </Form.Item>
-          <Form.Item label="背景圖示" name="schema" initialValue={'SCHEMA_01'}>
-            <Select options={schemaOptions} />
-          </Form.Item>
-          <Form.Item label="背景主色" name="primarySchemaColor" initialValue={1}>
-            <Radio.Group>
-              {colorList.map(color => (
-                <Radio key={color.value} value={color.value} style={{alignItems: 'center'}}>
-                  <div className='color-block' style={{background: `rgb(${color.rgb.join(',')})`}}></div>
-                </Radio>
-              ))}
-            </Radio.Group>
-          </Form.Item>
-          <Form.Item label="背景副色" name="secondarySchemaColor" initialValue={1}>
-            <Radio.Group>
-              {colorList.map(color => (
-                <Radio key={color.value} value={color.value} style={{alignItems: 'center'}}>
-                  <div className='color-block' style={{background: `rgb(${color.rgb.join(',')})`}}></div>
-                </Radio>
-              ))}
-            </Radio.Group>
-          </Form.Item>
-        </Form>
-        <Image rootClassName="image" src={iconUrl} preview={false} />
-      </Flex>
-    </Card>
+  const [form] = Form.useForm();
+  const [, copy] = useCopyToClipboard()
+  const [messageApi, contextHolder] = message.useMessage();
+  const [iconUrl, setIconUrl] = useState(`${iconBaseUrl}?${new URLSearchParams(defaultValues).toString()}`)
+  const setDebounceIconUrl = useDebounceCallback(setIconUrl, 500)
 
+  useEffect(() => {
+    const params = new URLSearchParams(iconUrl.split('?')[1]);
+    form.setFieldsValue({
+      symbol: params.get('symbol'),
+      symbolColor: Number(params.get('symbolColor')),
+      symbolScale: Number(params.get('symbolScale')),
+      symbolOffsetY: Number(params.get('symbolOffsetY')),
+      schema: params.get('schema'),
+      primarySchemaColor: Number(params.get('primarySchemaColor')),
+      secondarySchemaColor: Number(params.get('secondarySchemaColor')),
+    })
+  }, [form, iconUrl])
+  
+  const handleChangeUrl = (e) => {
+    setIconUrl(e.target.value)
+  }
+
+  const handleReset = () => {
+    setIconUrl(`${iconBaseUrl}?${new URLSearchParams(defaultValues).toString()}`)
+    messageApi.success('已重製')
+  }
+
+  const handleCopy = () => {
+    copy(iconUrl).then(() => {
+      messageApi.success('已複製')
+    })
+  }
+
+  const handleImageLoadError = () => {
+    messageApi.error('圖片參數錯誤，請在調整參數後試試')
+  }
+
+  return (
+    <>
+      {contextHolder}
+      <Card>
+        <Space.Compact block>
+          <Input addonBefore="LOGO 連結" value={iconUrl} onChange={handleChangeUrl}/>
+          <Tooltip title="重製">
+            <Button icon={<RedoOutlined />} onClick={handleReset} />
+          </Tooltip>
+          <Tooltip title="複製">
+            <Button icon={<CopyOutlined />} onClick={handleCopy} />
+          </Tooltip>
+        </Space.Compact>
+        <Divider orientation="left">Albion Guild Logo Maker</Divider>
+        <Flex>
+          <Form
+            form={form}
+            labelCol={{ span: 6 }}
+            wrapperCol={{ span: 18 }}
+            style={{width: 580}}
+            onValuesChange={(_changedValues, allValues) => {
+              console.log('onValuesChange', allValues)
+              const searchParams = new URLSearchParams({
+                type: 'PASSIVE_GUILD_UNRANKED',
+                ...allValues
+              });
+              setDebounceIconUrl(`${iconBaseUrl}?${searchParams.toString()}`)
+            }}
+          >
+            <Form.Item label="圖標" name="symbol">
+              <Select options={symbolOptions} />
+            </Form.Item>
+            <Form.Item label="圖標顏色" name="symbolColor">
+              <Radio.Group>
+                {colorList.map(color => (
+                  <Radio key={color.value} value={color.value} style={{alignItems: 'center'}}>
+                    <div className='color-block' style={{background: `rgb(${color.rgb.join(',')})`}}></div>
+                  </Radio>
+                ))}
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item label="圖標大小" name="symbolScale">
+              <Slider step={0.1} max={1.5} min={-0.5}/>
+            </Form.Item>
+            <Form.Item label="圖標位移" name="symbolOffsetY">
+              <Slider step={0.1} max={1.5} min={-0.5}/>
+            </Form.Item>
+            <Form.Item label="背景圖示" name="schema">
+              <Select options={schemaOptions} />
+            </Form.Item>
+            <Form.Item label="背景主色" name="primarySchemaColor">
+              <Radio.Group>
+                {colorList.map(color => (
+                  <Radio key={color.value} value={color.value} style={{alignItems: 'center'}}>
+                    <div className='color-block' style={{background: `rgb(${color.rgb.join(',')})`}}></div>
+                  </Radio>
+                ))}
+              </Radio.Group>
+            </Form.Item>
+            <Form.Item label="背景副色" name="secondarySchemaColor">
+              <Radio.Group>
+                {colorList.map(color => (
+                  <Radio key={color.value} value={color.value} style={{alignItems: 'center'}}>
+                    <div className='color-block' style={{background: `rgb(${color.rgb.join(',')})`}}></div>
+                  </Radio>
+                ))}
+              </Radio.Group>
+            </Form.Item>
+          </Form>
+          <Image rootClassName="image" src={iconUrl} preview={false} onError={handleImageLoadError} />
+        </Flex>
+      </Card>
+    </>
   )
 }
 
