@@ -128,10 +128,10 @@ const iconBaseUrl = 'https://render.albiononline.com/v1/guild/logo.png'
 const defaultValues = {
   type: 'PASSIVE_GUILD_UNRANKED',
   symbol: 'GUILDSYMBOL_001',
-  symbolColor: 5,
-  symbolScale: 0.8,
+  symbolColor: 1,
+  symbolScale: 1,
   symbolOffsetY: 0,
-  schema: 'SCHEMA_05',
+  schema: 'SCHEMA_01',
   primarySchemaColor:1,
   secondarySchemaColor: 2,
 }
